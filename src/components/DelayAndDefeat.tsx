@@ -50,20 +50,20 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Screens: 0=intro, 1=setDelay, 2=urgeBefore, 3=timer, 4=urgeAfter, 5=victory, 6=history
 export default function DelayAndDefeat() {
   const [screen, setScreen] = useState(0);
   const [delayTime, setDelayTime] = useState(60);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [urgeBefore] = useState(() => Math.floor(Math.random() * 4) + 6);
+  const [urgeBefore, setUrgeBefore] = useState(5);
   const [urgeAfter, setUrgeAfter] = useState(5);
   const [selectedDelay, setSelectedDelay] = useState<number | null>(null);
 
   const goNext = useCallback(() => setScreen((s) => s + 1), []);
-  const goBack = useCallback(() => setScreen((s) => Math.max(0, s - 1)), []);
 
   // Timer logic
   useEffect(() => {
-    if (screen !== 2) return;
+    if (screen !== 3) return;
     if (timeLeft <= 0) {
       goNext();
       return;
@@ -85,11 +85,12 @@ export default function DelayAndDefeat() {
       urgeBefore,
       urgeAfter,
     });
-    setScreen(5);
+    setScreen(6);
   };
 
   const restart = () => {
     setSelectedDelay(null);
+    setUrgeBefore(5);
     setUrgeAfter(5);
     setScreen(0);
   };
@@ -99,7 +100,7 @@ export default function DelayAndDefeat() {
       <div className="w-full max-w-[400px] min-h-[85vh] bg-card rounded-3xl shadow-xl overflow-hidden relative flex flex-col">
         <AnimatePresence mode="wait">
           {screen === 0 && (
-            <Screen key="intro" onNext={goNext} />
+            <IntroScreen key="intro" onNext={goNext} />
           )}
           {screen === 1 && (
             <SetDelayScreen
@@ -107,28 +108,33 @@ export default function DelayAndDefeat() {
               selected={selectedDelay}
               onSelect={(v) => { setSelectedDelay(v); setDelayTime(v); }}
               onStart={startTimer}
-              onBack={goBack}
             />
           )}
           {screen === 2 && (
+            <RateUrgeBeforeScreen
+              key="urgeBefore"
+              value={urgeBefore}
+              onChange={setUrgeBefore}
+              onNext={goNext}
+            />
+          )}
+          {screen === 3 && (
             <TimerScreen
               key="timer"
               timeLeft={timeLeft}
               total={delayTime}
               onSkip={goNext}
-              onBack={goBack}
             />
           )}
-          {screen === 3 && (
+          {screen === 4 && (
             <CheckUrgeScreen
               key="check"
               value={urgeAfter}
               onChange={setUrgeAfter}
               onNext={goNext}
-              onBack={goBack}
             />
           )}
-          {screen === 4 && (
+          {screen === 5 && (
             <VictoryScreen
               key="victory"
               delayTime={delayTime}
@@ -136,14 +142,13 @@ export default function DelayAndDefeat() {
               urgeAfter={urgeAfter}
               onSave={handleSave}
               onRetry={restart}
-              onViewHistory={() => setScreen(5)}
-              onBack={goBack}
+              onViewHistory={() => setScreen(6)}
             />
           )}
-          {screen === 5 && (
+          {screen === 6 && (
             <HistoryScreen
               key="history"
-              onBack={() => setScreen(4)}
+              onBack={() => setScreen(5)}
               onNewDelay={restart}
             />
           )}
@@ -153,8 +158,8 @@ export default function DelayAndDefeat() {
   );
 }
 
-// Screen 1 - Introduction
-function Screen({ onNext }: { onNext: () => void }) {
+// Screen 0 - Introduction (has back button)
+function IntroScreen({ onNext }: { onNext: () => void }) {
   return (
     <motion.div
       variants={pageVariants}
@@ -163,6 +168,10 @@ function Screen({ onNext }: { onNext: () => void }) {
       exit="exit"
       className="flex flex-col flex-1 px-5 py-8"
     >
+      <button className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
+        <ArrowLeft size={16} /> Back
+      </button>
+
       <h1 className="text-2xl font-bold text-foreground mb-6 text-justify">
         Delay and Defeat ⏳
       </h1>
@@ -187,17 +196,15 @@ function Screen({ onNext }: { onNext: () => void }) {
   );
 }
 
-// Screen 2 - Set Delay
+// Screen 1 - Set Delay (no back button)
 function SetDelayScreen({
   selected,
   onSelect,
   onStart,
-  onBack,
 }: {
   selected: number | null;
   onSelect: (v: number) => void;
   onStart: () => void;
-  onBack: () => void;
 }) {
   return (
     <motion.div
@@ -207,10 +214,6 @@ function SetDelayScreen({
       exit="exit"
       className="flex flex-col flex-1 px-5 py-8"
     >
-      <button onClick={onBack} className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
-        <ArrowLeft size={16} /> Back
-      </button>
-
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify">
         How long will you wait?
       </h1>
@@ -245,17 +248,65 @@ function SetDelayScreen({
   );
 }
 
-// Screen 3 - Timer
+// Screen 2 - Rate Urge Before (no back button)
+function RateUrgeBeforeScreen({
+  value,
+  onChange,
+  onNext,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  onNext: () => void;
+}) {
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="flex flex-col flex-1 px-5 py-8"
+    >
+      <h1 className="text-2xl font-bold text-foreground mb-4 text-justify">
+        How strong is the urge right now?
+      </h1>
+
+      <div className="space-y-3 text-base text-foreground text-justified leading-relaxed mb-10">
+        <p>Before we start the timer, rate how strong the craving feels right now.</p>
+        <p>Tap the dots to show the intensity of the urge.</p>
+      </div>
+
+      <div className="flex justify-center gap-2 my-8">
+        {Array.from({ length: 10 }, (_, i) => (
+          <button
+            key={i}
+            onClick={() => onChange(i + 1)}
+            className={`w-6 h-6 rounded-full transition-all duration-300 ${
+              i < value
+                ? "bg-primary shadow-md scale-110"
+                : "bg-accent"
+            }`}
+          />
+        ))}
+      </div>
+
+      <div className="mt-auto">
+        <Button onClick={onNext} className="w-full" size="lg">
+          Start Timer
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
+// Screen 3 - Timer (no back button)
 function TimerScreen({
   timeLeft,
   total,
   onSkip,
-  onBack,
 }: {
   timeLeft: number;
   total: number;
   onSkip: () => void;
-  onBack: () => void;
 }) {
   const progress = total > 0 ? (total - timeLeft) / total : 0;
 
@@ -267,10 +318,6 @@ function TimerScreen({
       exit="exit"
       className="flex flex-col flex-1 px-5 py-8 items-center"
     >
-      <button onClick={onBack} className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
-        <ArrowLeft size={16} /> Back
-      </button>
-
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify w-full">
         Stay with the moment
       </h1>
@@ -282,11 +329,9 @@ function TimerScreen({
       </div>
 
       <div className="relative flex items-center justify-center my-6">
-        {/* Pulsing background ring */}
         <div className="absolute w-48 h-48 rounded-full bg-primary/15 animate-pulse-ring" />
         <div className="absolute w-56 h-56 rounded-full bg-primary/8 animate-pulse-ring" style={{ animationDelay: "0.5s" }} />
 
-        {/* Progress ring */}
         <svg className="w-44 h-44 -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="52" fill="none" stroke="hsl(var(--accent))" strokeWidth="8" />
           <circle
@@ -319,17 +364,15 @@ function TimerScreen({
   );
 }
 
-// Screen 4 - Check Urge
+// Screen 4 - Check Urge After (no back button)
 function CheckUrgeScreen({
   value,
   onChange,
   onNext,
-  onBack,
 }: {
   value: number;
   onChange: (v: number) => void;
   onNext: () => void;
-  onBack: () => void;
 }) {
   return (
     <motion.div
@@ -339,10 +382,6 @@ function CheckUrgeScreen({
       exit="exit"
       className="flex flex-col flex-1 px-5 py-8"
     >
-      <button onClick={onBack} className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
-        <ArrowLeft size={16} /> Back
-      </button>
-
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify">
         How strong is the urge now?
       </h1>
@@ -375,7 +414,7 @@ function CheckUrgeScreen({
   );
 }
 
-// Screen 5 - Victory
+// Screen 5 - Victory (no back button)
 function VictoryScreen({
   delayTime,
   urgeBefore,
@@ -383,7 +422,6 @@ function VictoryScreen({
   onSave,
   onRetry,
   onViewHistory,
-  onBack,
 }: {
   delayTime: number;
   urgeBefore: number;
@@ -391,7 +429,6 @@ function VictoryScreen({
   onSave: () => void;
   onRetry: () => void;
   onViewHistory: () => void;
-  onBack: () => void;
 }) {
   return (
     <motion.div
@@ -401,10 +438,6 @@ function VictoryScreen({
       exit="exit"
       className="flex flex-col flex-1 px-5 py-8"
     >
-      <button onClick={onBack} className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
-        <ArrowLeft size={16} /> Back
-      </button>
-
       <h1 className="text-2xl font-bold text-foreground mb-2 text-justify">
         You delayed the urge! 🎉
       </h1>
@@ -415,7 +448,6 @@ function VictoryScreen({
         <p>Each time you delay an urge, you build stronger self-control.</p>
       </div>
 
-      {/* Summary Card */}
       <div className="bg-card rounded-2xl shadow-md p-5 space-y-4 mb-6 border border-border">
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-muted-foreground">Delay Time</span>
@@ -454,7 +486,7 @@ function VictoryScreen({
   );
 }
 
-// Screen 6 - History
+// Screen 6 - History (no back button, has back to go to victory)
 function HistoryScreen({
   onBack,
   onNewDelay,
