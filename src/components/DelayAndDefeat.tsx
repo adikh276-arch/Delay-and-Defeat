@@ -291,7 +291,7 @@ function RateUrgeBeforeScreen({
 
       <div className="mt-auto">
         <Button onClick={onNext} className="w-full" size="lg">
-          Start Timer
+          Next
         </Button>
       </div>
     </motion.div>
