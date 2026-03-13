@@ -103,19 +103,19 @@ export default function DelayAndDefeat() {
             <IntroScreen key="intro" onNext={goNext} />
           )}
           {screen === 1 && (
-            <SetDelayScreen
-              key="delay"
-              selected={selectedDelay}
-              onSelect={(v) => { setSelectedDelay(v); setDelayTime(v); }}
-              onStart={startTimer}
-            />
-          )}
-          {screen === 2 && (
             <RateUrgeBeforeScreen
               key="urgeBefore"
               value={urgeBefore}
               onChange={setUrgeBefore}
               onNext={goNext}
+            />
+          )}
+          {screen === 2 && (
+            <SetDelayScreen
+              key="delay"
+              selected={selectedDelay}
+              onSelect={(v) => { setSelectedDelay(v); setDelayTime(v); }}
+              onStart={startTimer}
             />
           )}
           {screen === 3 && (
