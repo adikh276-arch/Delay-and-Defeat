@@ -21,8 +21,8 @@ const DELAY_OPTIONS = [
 
 const pageVariants = {
   initial: { opacity: 0, x: 60 },
-  animate: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
-  exit: { opacity: 0, x: -60, transition: { duration: 0.4, ease: "easeIn" } },
+  animate: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const } },
+  exit: { opacity: 0, x: -60, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const } },
 };
 
 function getHistory(): HistoryEntry[] {
