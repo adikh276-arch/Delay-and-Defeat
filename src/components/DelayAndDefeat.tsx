@@ -50,7 +50,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-// Screens: 0=intro, 1=setDelay, 2=urgeBefore, 3=timer, 4=urgeAfter, 5=victory, 6=history
+// Screens: 0=intro, 1=urgeBefore, 2=setDelay, 3=timer, 4=urgeAfter, 5=victory, 6=history
 export default function DelayAndDefeat() {
   const [screen, setScreen] = useState(0);
   const [delayTime, setDelayTime] = useState(60);
@@ -103,19 +103,19 @@ export default function DelayAndDefeat() {
             <IntroScreen key="intro" onNext={goNext} />
           )}
           {screen === 1 && (
-            <SetDelayScreen
-              key="delay"
-              selected={selectedDelay}
-              onSelect={(v) => { setSelectedDelay(v); setDelayTime(v); }}
-              onStart={startTimer}
-            />
-          )}
-          {screen === 2 && (
             <RateUrgeBeforeScreen
               key="urgeBefore"
               value={urgeBefore}
               onChange={setUrgeBefore}
               onNext={goNext}
+            />
+          )}
+          {screen === 2 && (
+            <SetDelayScreen
+              key="delay"
+              selected={selectedDelay}
+              onSelect={(v) => { setSelectedDelay(v); setDelayTime(v); }}
+              onStart={startTimer}
             />
           )}
           {screen === 3 && (
@@ -291,7 +291,7 @@ function RateUrgeBeforeScreen({
 
       <div className="mt-auto">
         <Button onClick={onNext} className="w-full" size="lg">
-          Start Timer
+          Next
         </Button>
       </div>
     </motion.div>
