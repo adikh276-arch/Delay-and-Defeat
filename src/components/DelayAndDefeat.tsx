@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import hourglassImg from "@/assets/hourglass.png";
+import { useTranslation } from "react-i18next";
 
 interface HistoryEntry {
   id: string;
@@ -13,10 +14,10 @@ interface HistoryEntry {
 }
 
 const DELAY_OPTIONS = [
-  { label: "30 seconds", value: 30 },
-  { label: "1 minute", value: 60 },
-  { label: "2 minutes", value: 120 },
-  { label: "3 minutes", value: 180 },
+  { labelKey: "delay_30s", value: 30 },
+  { labelKey: "delay_1m", value: 60 },
+  { labelKey: "delay_2m", value: 120 },
+  { labelKey: "delay_3m", value: 180 },
 ];
 
 const pageVariants = {
@@ -39,9 +40,9 @@ function saveHistory(entry: HistoryEntry) {
   localStorage.setItem("delay-defeat-history", JSON.stringify(history));
 }
 
-function formatDelay(seconds: number): string {
-  if (seconds < 60) return `${seconds} seconds`;
-  return `${seconds / 60} minute${seconds > 60 ? "s" : ""}`;
+function formatDelay(seconds: number, t: any): string {
+  if (seconds < 60) return t("format_seconds", { count: seconds });
+  return t(seconds > 60 ? "format_minutes" : "format_minute", { count: seconds / 60 });
 }
 
 function formatTime(seconds: number): string {
@@ -50,8 +51,8 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-// Screens: 0=intro, 1=urgeBefore, 2=setDelay, 3=timer, 4=urgeAfter, 5=victory, 6=history
 export default function DelayAndDefeat() {
+  const { t } = useTranslation();
   const [screen, setScreen] = useState(0);
   const [delayTime, setDelayTime] = useState(60);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -61,7 +62,6 @@ export default function DelayAndDefeat() {
 
   const goNext = useCallback(() => setScreen((s) => s + 1), []);
 
-  // Timer logic
   useEffect(() => {
     if (screen !== 3) return;
     if (timeLeft <= 0) {
@@ -150,6 +150,7 @@ export default function DelayAndDefeat() {
               key="history"
               onBack={() => setScreen(5)}
               onNewDelay={restart}
+              formatDelay={(sec) => formatDelay(sec, t)}
             />
           )}
         </AnimatePresence>
@@ -158,69 +159,49 @@ export default function DelayAndDefeat() {
   );
 }
 
-// Screen 0 - Introduction (has back button)
 function IntroScreen({ onNext }: { onNext: () => void }) {
+  const { t } = useTranslation();
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
       <button className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("back")}
       </button>
 
       <h1 className="text-2xl font-bold text-foreground mb-6 text-justify">
-        Delay and Defeat ⏳
+        {t("delay_and_defeat")}
       </h1>
 
       <div className="flex justify-center mb-6">
-        <img src={hourglassImg} alt="Hourglass" className="w-32 h-32 object-contain" />
+        <img src={hourglassImg} alt={t("hourglass_alt")} className="w-32 h-32 object-contain" />
       </div>
 
       <div className="flex-1 space-y-4 text-base text-foreground text-justified leading-relaxed">
-        <p>Cravings often feel powerful in the moment.</p>
-        <p>But most urges are temporary and fade with time.</p>
-        <p>If you wait just a little while, the craving usually becomes weaker.</p>
-        <p>Let's delay the urge and watch what happens.</p>
+        <p>{t("intro_p1")}</p>
+        <p>{t("intro_p2")}</p>
+        <p>{t("intro_p3")}</p>
+        <p>{t("intro_p4")}</p>
       </div>
 
       <div className="mt-8">
         <Button onClick={onNext} className="w-full" size="lg">
-          Start Delay
+          {t("start_delay")}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-// Screen 1 - Set Delay (no back button)
-function SetDelayScreen({
-  selected,
-  onSelect,
-  onStart,
-}: {
-  selected: number | null;
-  onSelect: (v: number) => void;
-  onStart: () => void;
-}) {
+function SetDelayScreen({ selected, onSelect, onStart }: { selected: number | null; onSelect: (v: number) => void; onStart: () => void }) {
+  const { t } = useTranslation();
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify">
-        How long will you wait?
+        {t("how_long_wait")}
       </h1>
 
       <div className="space-y-3 text-base text-foreground text-justified leading-relaxed mb-8">
-        <p>Choose a short delay before acting on the urge.</p>
-        <p>During this time, simply observe the craving without reacting.</p>
+        <p>{t("choose_short_delay")}</p>
+        <p>{t("observe_craving")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-auto">
@@ -234,45 +215,31 @@ function SetDelayScreen({
                 : "border-border bg-card text-foreground hover:border-primary/40"
             }`}
           >
-            {opt.label}
+            {t(opt.labelKey)}
           </button>
         ))}
       </div>
 
       <div className="mt-8">
         <Button onClick={onStart} className="w-full" size="lg" disabled={!selected}>
-          Start Timer
+          {t("start_timer")}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-// Screen 2 - Rate Urge Before (no back button)
-function RateUrgeBeforeScreen({
-  value,
-  onChange,
-  onNext,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  onNext: () => void;
-}) {
+function RateUrgeBeforeScreen({ value, onChange, onNext }: { value: number; onChange: (v: number) => void; onNext: () => void }) {
+  const { t } = useTranslation();
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify">
-        How strong is the urge right now?
+        {t("how_strong_now")}
       </h1>
 
       <div className="space-y-3 text-base text-foreground text-justified leading-relaxed mb-10">
-        <p>Before we start the timer, rate how strong the craving feels right now.</p>
-        <p>Tap the dots to show the intensity of the urge.</p>
+        <p>{t("timer_instructions_p1")}</p>
+        <p>{t("timer_instructions_p2")}</p>
       </div>
 
       <div className="flex justify-center gap-2 my-8">
@@ -280,52 +247,34 @@ function RateUrgeBeforeScreen({
           <button
             key={i}
             onClick={() => onChange(i + 1)}
-            className={`w-6 h-6 rounded-full transition-all duration-300 ${
-              i < value
-                ? "bg-primary shadow-md scale-110"
-                : "bg-accent"
-            }`}
+            className={`w-6 h-6 rounded-full transition-all duration-300 ${i < value ? "bg-primary shadow-md scale-110" : "bg-accent"}`}
           />
         ))}
       </div>
 
       <div className="mt-auto">
         <Button onClick={onNext} className="w-full" size="lg">
-          Next
+          {t("next")}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-// Screen 3 - Timer (no back button)
-function TimerScreen({
-  timeLeft,
-  total,
-  onSkip,
-}: {
-  timeLeft: number;
-  total: number;
-  onSkip: () => void;
-}) {
+function TimerScreen({ timeLeft, total, onSkip }: { timeLeft: number; total: number; onSkip: () => void }) {
+  const { t } = useTranslation();
   const progress = total > 0 ? (total - timeLeft) / total : 0;
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8 items-center"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8 items-center">
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify w-full">
-        Stay with the moment
+        {t("stay_moment")}
       </h1>
 
       <div className="space-y-3 text-base text-foreground text-justified leading-relaxed w-full mb-8">
-        <p>Notice how the craving feels in your body.</p>
-        <p>Urges rise and fall like waves.</p>
-        <p>Watch the feeling without acting on it.</p>
+        <p>{t("observe_body")}</p>
+        <p>{t("urges_rise_fall")}</p>
+        <p>{t("observe_no_reaction")}</p>
       </div>
 
       <div className="relative flex items-center justify-center my-6">
@@ -353,42 +302,28 @@ function TimerScreen({
         </span>
       </div>
 
-      <p className="text-muted-foreground text-sm mt-4 italic">Just breathe and wait.</p>
+      <p className="text-muted-foreground text-sm mt-4 italic">{t("just_breathe")}</p>
 
       <div className="mt-auto w-full">
         <Button onClick={onSkip} variant="secondary" className="w-full" size="lg">
-          Skip Timer
+          {t("skip_timer")}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-// Screen 4 - Check Urge After (no back button)
-function CheckUrgeScreen({
-  value,
-  onChange,
-  onNext,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  onNext: () => void;
-}) {
+function CheckUrgeScreen({ value, onChange, onNext }: { value: number; onChange: (v: number) => void; onNext: () => void }) {
+  const { t } = useTranslation();
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
       <h1 className="text-2xl font-bold text-foreground mb-4 text-justify">
-        How strong is the urge now?
+        {t("how_strong_after")}
       </h1>
 
       <div className="space-y-3 text-base text-foreground text-justified leading-relaxed mb-10">
-        <p>Take a moment to check in again.</p>
-        <p>Did the craving stay the same, or did it change?</p>
+        <p>{t("check_p1")}</p>
+        <p>{t("check_p2")}</p>
       </div>
 
       <div className="flex justify-center gap-2 my-8">
@@ -396,125 +331,85 @@ function CheckUrgeScreen({
           <button
             key={i}
             onClick={() => onChange(i + 1)}
-            className={`w-6 h-6 rounded-full transition-all duration-300 ${
-              i < value
-                ? "bg-primary shadow-md scale-110"
-                : "bg-accent"
-            }`}
+            className={`w-6 h-6 rounded-full transition-all duration-300 ${i < value ? "bg-primary shadow-md scale-110" : "bg-accent"}`}
           />
         ))}
       </div>
 
       <div className="mt-auto">
         <Button onClick={onNext} className="w-full" size="lg">
-          Next
+          {t("next")}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-// Screen 5 - Victory (no back button)
-function VictoryScreen({
-  delayTime,
-  urgeBefore,
-  urgeAfter,
-  onSave,
-  onRetry,
-  onViewHistory,
-}: {
-  delayTime: number;
-  urgeBefore: number;
-  urgeAfter: number;
-  onSave: () => void;
-  onRetry: () => void;
-  onViewHistory: () => void;
-}) {
+function VictoryScreen({ delayTime, urgeBefore, urgeAfter, onSave, onRetry, onViewHistory }: { delayTime: number; urgeBefore: number; urgeAfter: number; onSave: () => void; onRetry: () => void; onViewHistory: () => void }) {
+  const { t } = useTranslation();
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
       <h1 className="text-2xl font-bold text-foreground mb-2 text-justify">
-        You delayed the urge! 🎉
+        {t("victory_title")}
       </h1>
 
       <div className="space-y-3 text-base text-foreground text-justified leading-relaxed mb-6">
-        <p>By waiting instead of reacting, you proved something important.</p>
-        <p>Cravings do not control you.</p>
-        <p>Each time you delay an urge, you build stronger self-control.</p>
+        <p>{t("victory_p1")}</p>
+        <p>{t("victory_p2")}</p>
+        <p>{t("victory_p3")}</p>
       </div>
 
       <div className="bg-card rounded-2xl shadow-md p-5 space-y-4 mb-6 border border-border">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-muted-foreground">Delay Time</span>
-          <span className="text-sm font-bold text-foreground">{formatDelay(delayTime)}</span>
+          <span className="text-sm font-medium text-muted-foreground">{t("delay_time")}</span>
+          <span className="text-sm font-bold text-foreground">{formatDelay(delayTime, t)}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-muted-foreground">Urge Level Before</span>
+          <span className="text-sm font-medium text-muted-foreground">{t("urge_before")}</span>
           <div className="flex gap-1">
-            {Array.from({ length: urgeBefore }, (_, i) => (
-              <div key={i} className="w-3 h-3 rounded-full bg-primary" />
-            ))}
+            {Array.from({ length: urgeBefore }, (_, i) => <div key={i} className="w-3 h-3 rounded-full bg-primary" />)}
           </div>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-muted-foreground">Urge Level After</span>
+          <span className="text-sm font-medium text-muted-foreground">{t("urge_after")}</span>
           <div className="flex gap-1">
-            {Array.from({ length: urgeAfter }, (_, i) => (
-              <div key={i} className="w-3 h-3 rounded-full bg-secondary" />
-            ))}
+            {Array.from({ length: urgeAfter }, (_, i) => <div key={i} className="w-3 h-3 rounded-full bg-secondary" />)}
           </div>
         </div>
       </div>
 
       <div className="mt-auto space-y-3">
         <Button onClick={onSave} className="w-full" size="lg">
-          Save Progress
+          {t("save_progress")}
         </Button>
         <Button onClick={onRetry} variant="secondary" className="w-full" size="lg">
-          Try Another Delay
+          {t("try_another_delay")}
         </Button>
         <Button onClick={onViewHistory} variant="outline" className="w-full" size="lg">
-          View Past History
+          {t("view_history")}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-// Screen 6 - History (no back button, has back to go to victory)
-function HistoryScreen({
-  onBack,
-  onNewDelay,
-}: {
-  onBack: () => void;
-  onNewDelay: () => void;
-}) {
+function HistoryScreen({ onBack, onNewDelay, formatDelay }: { onBack: () => void; onNewDelay: () => void; formatDelay: (seconds: number) => string }) {
+  const { t } = useTranslation();
   const history = getHistory();
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex flex-col flex-1 px-5 py-8"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-1 text-primary text-sm mb-6 self-start">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("back")}
       </button>
 
       <h1 className="text-2xl font-bold text-foreground mb-6 text-justify">
-        Your History 📊
+        {t("your_history")}
       </h1>
 
       {history.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground text-center">No entries yet. Complete a delay to see your progress!</p>
+          <p className="text-muted-foreground text-center">{t("no_entries")}</p>
         </div>
       ) : (
         <div className="flex-1 space-y-3 overflow-y-auto">
@@ -526,19 +421,15 @@ function HistoryScreen({
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Before:</span>
+                  <span className="text-xs text-muted-foreground">{t("before_label")}</span>
                   <div className="flex gap-0.5">
-                    {Array.from({ length: entry.urgeBefore }, (_, i) => (
-                      <div key={i} className="w-2 h-2 rounded-full bg-primary" />
-                    ))}
+                    {Array.from({ length: entry.urgeBefore }, (_, i) => <div key={i} className="w-2 h-2 rounded-full bg-primary" />)}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">After:</span>
+                  <span className="text-xs text-muted-foreground">{t("after_label")}</span>
                   <div className="flex gap-0.5">
-                    {Array.from({ length: entry.urgeAfter }, (_, i) => (
-                      <div key={i} className="w-2 h-2 rounded-full bg-secondary" />
-                    ))}
+                    {Array.from({ length: entry.urgeAfter }, (_, i) => <div key={i} className="w-2 h-2 rounded-full bg-secondary" />)}
                   </div>
                 </div>
               </div>
@@ -549,7 +440,7 @@ function HistoryScreen({
 
       <div className="mt-6">
         <Button onClick={onNewDelay} className="w-full" size="lg">
-          Start New Delay
+          {t("start_new_delay")}
         </Button>
       </div>
     </motion.div>
