@@ -7,7 +7,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     define: {
-      'process.env.DATABASE_URL': JSON.stringify(env.DATABASE_URL),
+      'process.env.DATABASE_URL': JSON.stringify(
+        mode === 'production' ? "RUNTIME_ENV_DATABASE_URL" : env.DATABASE_URL
+      ),
     },
     base: "/delay_and_defeat/",
   server: {
