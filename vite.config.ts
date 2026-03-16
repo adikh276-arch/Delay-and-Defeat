@@ -1,10 +1,15 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  base: "/delay_and_defeat/",
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    define: {
+      'process.env.DATABASE_URL': JSON.stringify(env.DATABASE_URL),
+    },
+    base: "/delay_and_defeat/",
   server: {
     host: "::",
     port: 8080,
@@ -18,4 +23,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  };
+});

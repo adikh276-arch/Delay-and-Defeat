@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import hourglassImg from "@/assets/hourglass.png";
 import { useTranslation } from "react-i18next";
+import { pool } from "@/lib/db";
 
 interface HistoryEntry {
   id: string;
@@ -77,7 +78,7 @@ export default function DelayAndDefeat() {
     goNext();
   };
 
-  const handleSave = () => {
+  const handleCompleteFlow = async () => {
     saveHistory({
       id: Date.now().toString(),
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -85,7 +86,19 @@ export default function DelayAndDefeat() {
       urgeBefore,
       urgeAfter,
     });
-    setScreen(6);
+    setScreen(5);
+
+    try {
+      const userId = sessionStorage.getItem("user_id");
+      if (userId) {
+        await pool.query(
+          "INSERT INTO delay_sessions (user_id, delay_time, urge_before, urge_after) VALUES ($1, $2, $3, $4)",
+          [userId, delayTime, urgeBefore, urgeAfter]
+        );
+      }
+    } catch (e) {
+      console.error("Neon DB Save failed:", e);
+    }
   };
 
   const restart = () => {
@@ -131,7 +144,7 @@ export default function DelayAndDefeat() {
               key="check"
               value={urgeAfter}
               onChange={setUrgeAfter}
-              onNext={goNext}
+              onNext={handleCompleteFlow}
             />
           )}
           {screen === 5 && (
@@ -140,7 +153,6 @@ export default function DelayAndDefeat() {
               delayTime={delayTime}
               urgeBefore={urgeBefore}
               urgeAfter={urgeAfter}
-              onSave={handleSave}
               onRetry={restart}
               onViewHistory={() => setScreen(6)}
             />
@@ -345,7 +357,7 @@ function CheckUrgeScreen({ value, onChange, onNext }: { value: number; onChange:
   );
 }
 
-function VictoryScreen({ delayTime, urgeBefore, urgeAfter, onSave, onRetry, onViewHistory }: { delayTime: number; urgeBefore: number; urgeAfter: number; onSave: () => void; onRetry: () => void; onViewHistory: () => void }) {
+function VictoryScreen({ delayTime, urgeBefore, urgeAfter, onRetry, onViewHistory }: { delayTime: number; urgeBefore: number; urgeAfter: number; onRetry: () => void; onViewHistory: () => void }) {
   const { t } = useTranslation();
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
@@ -379,13 +391,10 @@ function VictoryScreen({ delayTime, urgeBefore, urgeAfter, onSave, onRetry, onVi
       </div>
 
       <div className="mt-auto space-y-3">
-        <Button onClick={onSave} className="w-full" size="lg">
-          {t("save_progress")}
-        </Button>
-        <Button onClick={onRetry} variant="secondary" className="w-full" size="lg">
+        <Button onClick={onRetry} className="w-full" size="lg">
           {t("try_another_delay")}
         </Button>
-        <Button onClick={onViewHistory} variant="outline" className="w-full" size="lg">
+        <Button onClick={onViewHistory} variant="secondary" className="w-full" size="lg">
           {t("view_history")}
         </Button>
       </div>
@@ -395,7 +404,39 @@ function VictoryScreen({ delayTime, urgeBefore, urgeAfter, onSave, onRetry, onVi
 
 function HistoryScreen({ onBack, onNewDelay, formatDelay }: { onBack: () => void; onNewDelay: () => void; formatDelay: (seconds: number) => string }) {
   const { t } = useTranslation();
-  const history = getHistory();
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDBHistory() {
+      const userId = sessionStorage.getItem("user_id");
+      if (!userId) {
+        setHistory(getHistory());
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await pool.query(
+          "SELECT id, delay_time, urge_before, urge_after, created_at FROM delay_sessions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
+          [userId]
+        );
+        setHistory(
+          res.rows.map((r: any) => ({
+            id: r.id.toString(),
+            date: new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            delayTime: r.delay_time,
+            urgeBefore: r.urge_before,
+            urgeAfter: r.urge_after,
+          }))
+        );
+      } catch (e) {
+        console.error("DB History fetch failed", e);
+        setHistory(getHistory());
+      }
+      setLoading(false);
+    }
+    fetchDBHistory();
+  }, []);
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col flex-1 px-5 py-8">
@@ -407,7 +448,11 @@ function HistoryScreen({ onBack, onNewDelay, formatDelay }: { onBack: () => void
         {t("your_history")}
       </h1>
 
-      {history.length === 0 ? (
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground text-center text-sm animate-pulse">Loading...</p>
+        </div>
+      ) : history.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-muted-foreground text-center">{t("no_entries")}</p>
         </div>
